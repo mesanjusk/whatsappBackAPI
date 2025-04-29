@@ -1,40 +1,30 @@
+const { Client } = require('whatsapp-web.js');
 const express = require('express');
-const qrcode = require('qrcode-terminal');
-const { Client, LocalAuth } = require('whatsapp-web.js');
-const cors = require('cors');
+const http = require('http');
+const { Server } = require('socket.io');
+const qrcode = require('qrcode');
 
 const app = express();
-app.use(cors());
-app.use(express.json());
+const server = http.createServer(app);
+const io = new Server(server);
 
 const client = new Client({
-    authStrategy: new LocalAuth(),
-    puppeteer: { headless: true }
+  puppeteer: { headless: true },
+  authStrategy: new LocalAuth(),
 });
 
-client.on('qr', (qr) => {
-    qrcode.generate(qr, { small: true });
-    console.log('Scan the QR above to authenticate');
+client.on('qr', async (qr) => {
+  const qrImageUrl = await qrcode.toDataURL(qr);
+  io.emit('qr', qrImageUrl); // Send QR to frontend
 });
 
 client.on('ready', () => {
-    console.log('WhatsApp client is ready!');
+  console.log('WhatsApp client is ready!');
+  io.emit('ready', true);
 });
 
 client.initialize();
 
-app.post('/send-message', async (req, res) => {
-    const { number, message } = req.body;
-    const chatId = `${number}@c.us`; // For international format
-    try {
-        await client.sendMessage(chatId, message);
-        res.send({ success: true, message: 'Message sent!' });
-    } catch (err) {
-        console.error('Error:', err);
-        res.status(500).send({ success: false, message: 'Failed to send' });
-    }
-});
-
-app.listen(3001, () => {
-    console.log('API server listening on http://localhost:3001');
+server.listen(5000, () => {
+  console.log('Server started on port 5000');
 });
