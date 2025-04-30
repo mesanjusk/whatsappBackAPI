@@ -15,16 +15,6 @@ const corsOptions = {
   allowedHeaders: ['Content-Type'],        // Ensure necessary headers are included
 };
 
-const QRCode = require('qrcode');
-
-// Generate the QR code image and send it as a base64 string
-QRCode.toDataURL('your-whatsapp-url-or-session-info', (err, qrCodeDataUrl) => {
-  if (err) throw err;
-  // Send the base64 string to the frontend
-  io.emit('qr', qrCodeDataUrl); // Emit the base64 image string
-});
-
-
 // Apply CORS middleware to allow requests from Vercel frontend
 app.use(cors(corsOptions));
 
