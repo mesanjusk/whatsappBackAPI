@@ -9,16 +9,14 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: '*', // Change to your frontend domain in production
+    origin: '*', // Or replace with your frontend URL
     methods: ['GET', 'POST']
   }
 });
 
-// Middleware
 app.use(cors());
 app.use(express.json());
 
-// WhatsApp client
 const client = new Client({
   authStrategy: new LocalAuth(),
   puppeteer: {
@@ -27,7 +25,7 @@ const client = new Client({
   }
 });
 
-// Socket.IO connection
+// Socket.IO events
 io.on('connection', (socket) => {
   console.log('🟢 Frontend connected via socket');
 
@@ -36,7 +34,7 @@ io.on('connection', (socket) => {
   });
 });
 
-// WhatsApp events
+// WhatsApp Events
 client.on('qr', async (qr) => {
   const qrImageUrl = await qrcode.toDataURL(qr);
   console.log('📲 QR code received, sending to frontend');
@@ -57,11 +55,11 @@ client.on('auth_failure', msg => {
 });
 
 client.on('disconnected', (reason) => {
-  console.log('❌ WhatsApp client disconnected:', reason);
+  console.log('❌ Client disconnected:', reason);
   io.emit('disconnected', reason);
 });
 
-// API endpoint to send message
+// ✅ REST API to send WhatsApp message
 app.post('/send-message', async (req, res) => {
   const { number, message } = req.body;
 
@@ -80,10 +78,8 @@ app.post('/send-message', async (req, res) => {
   }
 });
 
-// Start WhatsApp
 client.initialize();
 
-// Start server
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
