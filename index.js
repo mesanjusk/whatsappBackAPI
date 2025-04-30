@@ -3,10 +3,20 @@ const express = require('express');
 const { Client, RemoteAuth } = require('whatsapp-web.js');
 const MongoStore = require('wwebjs-mongo').MongoStore;
 const mongoose = require('mongoose');
+const cors = require('cors');
 const qrcode = require('qrcode-terminal');
+const socketIO = require('socket.io');
 
 const app = express();
 const port = process.env.PORT || 5000;
+
+// CORS Configuration
+const corsOptions = {
+  origin: 'https://sbsgondia.vercel.app',
+  methods: ['GET', 'POST'],
+  allowedHeaders: ['Content-Type'],
+};
+app.use(cors(corsOptions));
 
 (async () => {
   try {
@@ -56,13 +66,22 @@ const port = process.env.PORT || 5000;
 
     await client.initialize();
 
+    // ✅ Socket.IO Setup
+    const server = app.listen(port, () => {
+      console.log(`🚀 Server is running on port ${port}`);
+    });
+
+    const io = socketIO(server);
+    io.on('connection', (socket) => {
+      console.log('A user connected');
+      socket.on('disconnect', () => {
+        console.log('A user disconnected');
+      });
+    });
+
     // ✅ Basic route
     app.get('/', (req, res) => {
       res.send('🟢 WhatsApp backend is running!');
-    });
-
-    app.listen(port, () => {
-      console.log(`🚀 Server is running on port ${port}`);
     });
 
   } catch (error) {
