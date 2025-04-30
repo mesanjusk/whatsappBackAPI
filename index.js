@@ -1,67 +1,59 @@
-// index.js
 import express from 'express';
-import { Server } from 'socket.io';
-import http from 'http';
-import cors from 'cors';
-import dotenv from 'dotenv';
 import mongoose from 'mongoose';
 import { Client, RemoteAuth } from 'whatsapp-web.js';
-import MongoStore from 'wwebjs-mongo';
+import { MongoStore } from 'wwebjs-mongo';
+import qrcode from 'qrcode-terminal';
+import dotenv from 'dotenv';
 
 dotenv.config();
 
 const app = express();
-app.use(cors());
+const port = process.env.PORT || 3000;
+const mongoURI = process.env.MONGO_URI || 'your-mongodb-uri-here';
 
-const server = http.createServer(app);
-const io = new Server(server, {
-  cors: {
-    origin: '*'
-  }
-});
+await mongoose.connect(mongoURI);
+console.log('MongoDB connected');
 
-mongoose.connect(process.env.MONGO_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
-}).then(() => console.log('✅ MongoDB connected'));
+const store = new MongoStore({ mongoose });
 
-const store = new MongoStore({ mongoose: mongoose });
 const client = new Client({
   authStrategy: new RemoteAuth({
     store,
-    backupSyncIntervalMs: 300000
+    backupSyncIntervalMs: 300000,
   }),
   puppeteer: {
-    args: ['--no-sandbox']
+    headless: true,
+    args: ['--no-sandbox'],
   }
 });
 
-client.on('qr', (qr) => {
+client.on('qr', qr => {
   console.log('QR RECEIVED');
-  io.emit('qr', qr);
+  qrcode.generate(qr, { small: true });
 });
 
 client.on('ready', () => {
   console.log('Client is ready!');
-  io.emit('ready');
 });
 
 client.on('authenticated', () => {
-  console.log('Client is authenticated');
+  console.log('Authenticated');
 });
 
-client.on('auth_failure', () => {
-  console.log('AUTH FAILURE');
+client.on('auth_failure', msg => {
+  console.error('Auth failure', msg);
+});
+
+client.on('disconnected', (reason) => {
+  console.log('Client was logged out', reason);
 });
 
 client.initialize();
 
-app.get('/', (req, res) => res.send('WhatsApp API Running'));
-
-app.get('/status', (req, res) => {
-  const isReady = client.info ? true : false;
-  res.json({ isReady });
+app.get('/', (req, res) => {
+  res.send('WhatsApp backend is running');
 });
 
-const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+app.listen(port, () => {
+  console.log(`Server is running on port ${port}`);
+});
