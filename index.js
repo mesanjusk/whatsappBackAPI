@@ -100,19 +100,23 @@ app.get('/send-message', async (req, res) => {
 // ✅ Auto-reply logic (does not interfere with existing features)
 client.on('message', async (message) => {
   try {
+    console.log(`Received message: ${message.body}`);  // Log the incoming message
+
+    // Check for 'hi' and 'order' in a case-insensitive manner
     if (message.body.toLowerCase() === 'hi') {
       await message.reply('Hello! How can I help you?');
-    }
-
-    if (message.body.toLowerCase() === 'order') {
+    } else if (message.body.toLowerCase() === 'order') {
       await message.reply('Please visit our website to place an order.');
     }
 
-    // Add more keyword-based replies here if needed
+    // Add more keywords if necessary
+    // You can create a switch or if-else block to handle other custom auto-replies
+
   } catch (err) {
     console.error('Auto-reply error:', err);
   }
 });
+
 
 // ✅ Initialize WhatsApp client
 client.initialize();
