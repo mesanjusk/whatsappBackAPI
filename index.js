@@ -1,99 +1,71 @@
+require('dotenv').config();
 const express = require('express');
-const { createServer } = require('http');
-const { Server } = require('socket.io');
-const qrcode = require('qrcode');
-const { Client, LocalAuth, RemoteAuth } = require('whatsapp-web.js');
-const { MongoStore } = require('wwebjs-mongo');
+const { Client, RemoteAuth } = require('whatsapp-web.js');
+const MongoStore = require('wwebjs-mongo').MongoStore;
 const mongoose = require('mongoose');
-const cors = require('cors');
+const qrcode = require('qrcode-terminal');
 
 const app = express();
-const server = createServer(app);
-const io = new Server(server, {
-  cors: {
-    origin: '*', // change if needed
-    methods: ['GET', 'POST']
-  }
-});
+const port = process.env.PORT || 5000;
 
-app.use(cors());
-app.use(express.json());
-
-const MONGO_URL = 'mongodb+srv://sanjuahuja:cY7NtMKm8M10MbUs@cluster0.wdfsd.mongodb.net/framme';
-
-mongoose.connect(MONGO_URL, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
-}).then(() => console.log('✅ MongoDB connected'))
-  .catch(err => console.error('❌ MongoDB error:', err));
-
-const store = new MongoStore({ mongoose: mongoose });
-
-const client = new Client({
-  authStrategy: new RemoteAuth({
-    store: store,
-    backupSyncIntervalMs: 300000,
-  }),
-  puppeteer: {
-    headless: true,
-    args: ['--no-sandbox']
-  }
-});
-
-client.initialize();
-
-io.on('connection', (socket) => {
-  console.log('✅ Socket.IO client connected');
-
-  if (client.info && client.info.wid) {
-    socket.emit('ready', 'WhatsApp is already authenticated');
-  }
-
-  client.on('qr', async (qr) => {
-    const qrImage = await qrcode.toDataURL(qr);
-    socket.emit('qr', qrImage);
-    console.log('📱 QR code sent');
-  });
-
-  client.on('ready', () => {
-    socket.emit('ready', 'WhatsApp is ready');
-    console.log('✅ WhatsApp is ready');
-  });
-
-  client.on('authenticated', () => {
-    socket.emit('authenticated', 'WhatsApp is authenticated');
-    console.log('🔐 WhatsApp is authenticated');
-  });
-
-  client.on('disconnected', (reason) => {
-    socket.emit('disconnected', reason);
-    console.log('⚠️ WhatsApp disconnected:', reason);
-  });
-});
-
-// Sample API to send a message
-app.post('/send-message', async (req, res) => {
-  const { number, message } = req.body;
+(async () => {
   try {
-    const chatId = number + '@c.us';
-    await client.sendMessage(chatId, message);
-    res.status(200).json({ success: true });
+    // ✅ Connect to MongoDB
+    await mongoose.connect(process.env.MONGO_URI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true
+    });
+    console.log('✅ Connected to MongoDB');
+
+    // ✅ Session store using wwebjs-mongo
+    const store = new MongoStore({ mongoose });
+
+    // ✅ WhatsApp Client with RemoteAuth
+    const client = new Client({
+      authStrategy: new RemoteAuth({
+        store,
+        backupSyncIntervalMs: 300000,
+        clientId: 'my-client'
+      }),
+      puppeteer: {
+        headless: true,
+        args: ['--no-sandbox', '--disable-setuid-sandbox']
+      }
+    });
+
+    client.on('qr', (qr) => {
+      console.log('📱 Scan this QR code:');
+      qrcode.generate(qr, { small: true });
+    });
+
+    client.on('ready', () => {
+      console.log('✅ WhatsApp client is ready!');
+    });
+
+    client.on('authenticated', () => {
+      console.log('🔐 Authenticated');
+    });
+
+    client.on('auth_failure', (msg) => {
+      console.error('❌ Authentication failure:', msg);
+    });
+
+    client.on('disconnected', (reason) => {
+      console.log('⚠️ Disconnected:', reason);
+    });
+
+    await client.initialize();
+
+    // ✅ Basic route
+    app.get('/', (req, res) => {
+      res.send('🟢 WhatsApp backend is running!');
+    });
+
+    app.listen(port, () => {
+      console.log(`🚀 Server is running on port ${port}`);
+    });
+
   } catch (error) {
-    res.status(500).json({ success: false, error });
+    console.error('❌ Startup Error:', error);
   }
-});
-
-// Optional logout route
-app.get('/logout', async (req, res) => {
-  try {
-    await client.logout();
-    res.send('Logged out');
-  } catch (err) {
-    res.status(500).send('Logout failed');
-  }
-});
-
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-  console.log(`🚀 Server is running on port ${PORT}`);
-});
+})();
