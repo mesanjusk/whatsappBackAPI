@@ -2,14 +2,14 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const qrcode = require('qrcode');
-const { Client, LocalAuth, Buttons } = require('whatsapp-web.js');
+const { Client, LocalAuth } = require('whatsapp-web.js');
 const cors = require('cors');
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: '*',
+    origin: '*', // Or replace with your frontend URL
     methods: ['GET', 'POST']
   }
 });
@@ -59,9 +59,9 @@ client.on('disconnected', (reason) => {
   io.emit('disconnected', reason);
 });
 
-// ✅ Normal send message API (GET)
-app.get('/send-message', async (req, res) => {
-  const { number, message } = req.query;
+// ✅ REST API to send WhatsApp message
+app.post('/send-message', async (req, res) => {
+  const { number, message } = req.body;
 
   if (!number || !message) {
     return res.status(400).json({ error: 'Number and message are required' });
@@ -77,43 +77,6 @@ app.get('/send-message', async (req, res) => {
     res.status(500).json({ success: false, error: 'Failed to send message' });
   }
 });
-
-// ✅ Send message with buttons (POST)
-app.post('/send-button-message', async (req, res) => {
-  const { number, message, buttons } = req.body;
-
-  if (!number || !message || !buttons || !Array.isArray(buttons)) {
-    return res.status(400).json({ error: 'Number, message and buttons are required' });
-  }
-
-  const chatId = number.includes('@c.us') ? number : `${number}@c.us`;
-
-  try {
-    const buttonObj = new Buttons(message, buttons.map((btn, i) => ({
-      body: btn
-    })), 'Choose an option:', '');
-
-    await client.sendMessage(chatId, buttonObj);
-    res.status(200).json({ success: true, message: 'Button message sent' });
-  } catch (error) {
-    console.error('❌ Failed to send button message:', error);
-    res.status(500).json({ success: false, error: 'Failed to send button message' });
-  }
-});
-
-// ✅ Auto reply to incoming messages
-client.on('message', async msg => {
-  console.log(`📩 Message from ${msg.from}: ${msg.body}`);
-
-  const text = msg.body.trim().toLowerCase();
-
-  if (text === 'hi') {
-    await msg.reply('👋 Hello! How can I help you?');
-  } else if (text === 'help') {
-    await msg.reply('🤖 Available commands:\n1. hi\n2. help');
-  }
-});
-
 
 client.initialize();
 
