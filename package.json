@@ -1,16 +1,21 @@
 {
-  "name": "whatsapp-backend",
+  "name": "whatsapp-back-api",
   "version": "1.0.0",
+  "description": "WhatsApp backend using whatsapp-web.js",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
   },
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "dependencies": {
-    "cors": "^2.8.5",
-    "express": "^4.21.2",
-    "qrcode": "^1.5.4",
+    "express": "^4.18.2",
+    "express-session": "^1.17.3",
     "qrcode-terminal": "^0.12.0",
-    "socket.io": "^4.8.1",
-    "whatsapp-web.js": "^1.22.1"
+    "whatsapp-web.js": "^1.23.0",
+    "dotenv": "^10.0.0",
+    "puppeteer": "^22.8.2",
+    "axios": "^1.6.8"
   }
 }
