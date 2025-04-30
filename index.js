@@ -59,9 +59,28 @@ client.on('disconnected', (reason) => {
   io.emit('disconnected', reason);
 });
 
-// ✅ REST API to send WhatsApp message
+// ✅ REST API to send WhatsApp message (POST method)
 app.post('/send-message', async (req, res) => {
   const { number, message } = req.body;
+
+  if (!number || !message) {
+    return res.status(400).json({ error: 'Number and message are required' });
+  }
+
+  const chatId = number.includes('@c.us') ? number : `${number}@c.us`;
+
+  try {
+    await client.sendMessage(chatId, message);
+    res.status(200).json({ success: true, message: 'Message sent' });
+  } catch (error) {
+    console.error('❌ Failed to send message:', error);
+    res.status(500).json({ success: false, error: 'Failed to send message' });
+  }
+});
+
+// ✅ REST API to send WhatsApp message (GET method)
+app.get('/send-message', async (req, res) => {
+  const { number, message } = req.query;
 
   if (!number || !message) {
     return res.status(400).json({ error: 'Number and message are required' });
