@@ -1,7 +1,7 @@
 import express from 'express';
 import mongoose from 'mongoose';
 import { Client, RemoteAuth } from 'whatsapp-web.js';
-import { MongoStore } from 'wwebjs-mongo';
+import MongoStore from 'wwebjs-mongo';
 import qrcode from 'qrcode-terminal';
 import dotenv from 'dotenv';
 
@@ -11,8 +11,9 @@ const app = express();
 const port = process.env.PORT || 3000;
 const mongoURI = process.env.MONGO_URI || 'your-mongodb-uri-here';
 
-await mongoose.connect(mongoURI);
-console.log('MongoDB connected');
+mongoose.connect(mongoURI)
+  .then(() => console.log('MongoDB connected'))
+  .catch(err => console.error('MongoDB connection error:', err));
 
 const store = new MongoStore({ mongoose });
 
