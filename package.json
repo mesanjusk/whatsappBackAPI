@@ -1,19 +1,35 @@
 {
   "name": "whatsapp-backend",
   "version": "1.0.0",
+  "description": "MERN stack project with WhatsApp Web.js API",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js"
+    "start": "node index.js",
+    "dev": "nodemon index.js"
   },
   "dependencies": {
-    "cors": "^2.8.5",
-    "express": "^4.21.2",
-    "qrcode": "^1.5.4",
+    "express": "^4.17.1",
+    "express-session": "^1.17.3",
+    "whatsapp-web.js": "^1.18.1",
     "qrcode-terminal": "^0.12.0",
-    "socket.io": "^4.8.1",
-    "whatsapp-web.js": "^1.22.1",
-    "dotenv": "^16.0.3",
-     "wwebjs-mongo": "^1.0.0",
-    "mongoose": "^6.0.0"
-  }
+    "dotenv": "^10.0.0",
+    "puppeteer": "^19.0.0",
+    "axios": "^0.27.2"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.15"
+  },
+  "engines": {
+    "node": "16.x"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-repo/whatsapp-backend"
+  },
+  "author": "Your Name",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/your-repo/whatsapp-backend/issues"
+  },
+  "homepage": "https://github.com/your-repo/whatsapp-backend#readme"
 }
