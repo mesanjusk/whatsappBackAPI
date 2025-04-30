@@ -1,73 +1,67 @@
 // index.js
-const { Client, RemoteAuth } = require('whatsapp-web.js');
-const express = require('express');
-const http = require('http');
-const socketIO = require('socket.io');
-const mongoose = require('mongoose');
-const { MongoStore } = require('wwebjs-mongo');
-const cors = require('cors');
-require('dotenv').config();
+import express from 'express';
+import { Server } from 'socket.io';
+import http from 'http';
+import cors from 'cors';
+import dotenv from 'dotenv';
+import mongoose from 'mongoose';
+import { Client, RemoteAuth } from 'whatsapp-web.js';
+import MongoStore from 'wwebjs-mongo';
+
+dotenv.config();
 
 const app = express();
+app.use(cors());
+
 const server = http.createServer(app);
-const io = socketIO(server, {
+const io = new Server(server, {
   cors: {
-    origin: '*',
+    origin: '*'
   }
 });
 
-app.use(cors());
-
-// Connect MongoDB
 mongoose.connect(process.env.MONGO_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true
-});
+}).then(() => console.log('✅ MongoDB connected'));
 
-const store = new MongoStore({ mongoose });
-
+const store = new MongoStore({ mongoose: mongoose });
 const client = new Client({
   authStrategy: new RemoteAuth({
     store,
-    backupSyncIntervalMs: 300000 // 5 minutes
+    backupSyncIntervalMs: 300000
   }),
   puppeteer: {
-    headless: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox']
+    args: ['--no-sandbox']
   }
 });
 
-let needsLogin = false;
-
-// WebSocket Events
-io.on('connection', (socket) => {
-  console.log('Client connected');
-  if (needsLogin) socket.emit('qr', 'NEEDS_LOGIN');
-
-  client.on('qr', (qr) => {
-    console.log('QR RECEIVED');
-    needsLogin = true;
-    socket.emit('qr', qr);
-  });
-
-  client.on('ready', () => {
-    console.log('WhatsApp ready');
-    needsLogin = false;
-    socket.emit('ready');
-  });
+client.on('qr', (qr) => {
+  console.log('QR RECEIVED');
+  io.emit('qr', qr);
 });
 
-client.on('disconnected', (reason) => {
-  console.log('WhatsApp disconnected:', reason);
-  needsLogin = true;
+client.on('ready', () => {
+  console.log('Client is ready!');
+  io.emit('ready');
+});
+
+client.on('authenticated', () => {
+  console.log('Client is authenticated');
+});
+
+client.on('auth_failure', () => {
+  console.log('AUTH FAILURE');
 });
 
 client.initialize();
 
-// API to check login status
-app.get('/whatsapp-status', (req, res) => {
-  res.json({ needsLogin });
+app.get('/', (req, res) => res.send('WhatsApp API Running'));
+
+app.get('/status', (req, res) => {
+  const isReady = client.info ? true : false;
+  res.json({ isReady });
 });
 
 const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+server.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
