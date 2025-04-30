@@ -2,14 +2,14 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const qrcode = require('qrcode');
-const { Client, LocalAuth, Buttons } = require('whatsapp-web.js');
+const { Client, LocalAuth } = require('whatsapp-web.js');
 const cors = require('cors');
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: '*',
+    origin: '*', // Or replace with your frontend URL
     methods: ['GET', 'POST']
   }
 });
@@ -75,53 +75,6 @@ app.post('/send-message', async (req, res) => {
   } catch (error) {
     console.error('❌ Failed to send message:', error);
     res.status(500).json({ success: false, error: 'Failed to send message' });
-  }
-});
-
-// ✅ GET API for message sending (e.g., for testing in browser)
-app.get('/send-message', async (req, res) => {
-  const { number, message } = req.query;
-
-  if (!number || !message) {
-    return res.status(400).json({ error: 'Number and message are required' });
-  }
-
-  const chatId = number.includes('@c.us') ? number : `${number}@c.us`;
-
-  try {
-    await client.sendMessage(chatId, message);
-    res.status(200).json({ success: true, message: 'Message sent' });
-  } catch (error) {
-    console.error('❌ Failed to send message:', error);
-    res.status(500).json({ success: false, error: 'Failed to send message' });
-  }
-});
-
-// ✅ Auto reply with buttons
-client.on('message', async (msg) => {
-  if (msg.body.toLowerCase() === 'menu') {
-    const buttonMessage = new Buttons(
-      'Please choose an option:',
-      [
-        { body: '📦 Order Status' },
-        { body: '🧾 Invoice' },
-        { body: '📞 Support' }
-      ],
-      'Main Menu',
-      'Select one'
-    );
-
-    await client.sendMessage(msg.from, buttonMessage);
-  }
-
-  if (msg.body === '📦 Order Status') {
-    await msg.reply('✅ Your order is being processed.');
-  }
-  if (msg.body === '🧾 Invoice') {
-    await msg.reply('🧾 Your invoice will be sent shortly.');
-  }
-  if (msg.body === '📞 Support') {
-    await msg.reply('☎️ Connecting you to support...');
   }
 });
 
