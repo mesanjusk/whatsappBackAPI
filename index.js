@@ -105,14 +105,15 @@ app.post('/send-button-message', async (req, res) => {
 client.on('message', async msg => {
   console.log(`📩 Message from ${msg.from}: ${msg.body}`);
 
-  if (msg.body.toLowerCase() === 'hi') {
-    msg.reply('Hello! How can I help you?');
-  }
+  const text = msg.body.trim().toLowerCase();
 
-  if (msg.body.toLowerCase() === 'help') {
-    msg.reply('Available commands:\n1. hi\n2. help');
+  if (text === 'hi') {
+    await msg.reply('👋 Hello! How can I help you?');
+  } else if (text === 'help') {
+    await msg.reply('🤖 Available commands:\n1. hi\n2. help');
   }
 });
+
 
 client.initialize();
 
