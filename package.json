@@ -1,18 +1,18 @@
 {
   "name": "whatsapp-backend",
   "version": "1.0.0",
-  "description": "Backend using whatsapp-web.js with RemoteAuth and MongoDB",
-  "main": "index.js",
   "type": "module",
+  "main": "index.js",
   "scripts": {
     "start": "node index.js"
   },
   "dependencies": {
-    "express": "^4.18.4",
+    "cors": "^2.8.5",
     "dotenv": "^16.3.1",
+    "express": "^4.18.2",
     "mongoose": "^7.6.1",
     "qrcode-terminal": "^0.12.0",
-    "whatsapp-web.js": "^1.23.0",
-    "wwebjs-mongo": "^1.1.0"
+    "wwebjs-mongo": "^1.2.0",
+    "whatsapp-web.js": "^1.23.0"
   }
 }
