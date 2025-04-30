@@ -1,20 +1,18 @@
 {
   "name": "whatsapp-backend",
   "version": "1.0.0",
-  "description": "WhatsApp API using whatsapp-web.js with MongoDB session storage",
+  "description": "Backend using whatsapp-web.js with RemoteAuth and MongoDB",
   "main": "index.js",
   "type": "module",
   "scripts": {
     "start": "node index.js"
   },
   "dependencies": {
-    "express": "^4.18.2",
-    "whatsapp-web.js": "^1.23.0",
-    "mongoose": "^7.6.0",
-    "qrcode-terminal": "^0.12.0",
+    "express": "^4.18.4",
     "dotenv": "^16.3.1",
-    "wwebjs-mongo": "https://github.com/openai-devrel/wwebjs-mongo-public.git"
-
-
+    "mongoose": "^7.6.1",
+    "qrcode-terminal": "^0.12.0",
+    "whatsapp-web.js": "^1.23.0",
+    "wwebjs-mongo": "^1.2.0"
   }
 }
