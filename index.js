@@ -1,40 +1,47 @@
+// index.js
+
 const express = require('express');
 const session = require('express-session');
-const mongoose = require('mongoose');
-const MongoStore = require('connect-mongo');  // Update this import
+const { Client } = require('whatsapp-web.js');
+const qrcode = require('qrcode-terminal');
+require('dotenv').config(); // Load environment variables from .env file
 
 const app = express();
+const port = process.env.PORT || 3000;  // Default to 3000 or Render's environment port
 
-// MongoDB connection string
-const mongoURL = 'your_mongo_connection_string_here'; // Replace with your MongoDB connection string
-
-// Connect to MongoDB
-mongoose.connect(mongoURL, { useNewUrlParser: true, useUnifiedTopology: true })
-  .then(() => console.log('MongoDB connected'))
-  .catch((err) => console.error('MongoDB connection error:', err));
-
-// Session setup with MongoStore
+// Setup session for WhatsApp Web.js
 app.use(session({
-  secret: 'your_secret_key',  // Replace with your secret key
+  secret: process.env.SESSION_SECRET || 'your-session-secret',  // Use environment variable for session secret
   resave: false,
   saveUninitialized: true,
-  store: MongoStore.create({
-    mongoUrl: mongoURL,   // The MongoDB connection URL
-    collectionName: 'sessions',  // The name of the session collection
-  }),
-  cookie: { 
-    secure: false,  // Set to true if you're using https
-    maxAge: 1000 * 60 * 60 * 24 // 1 day
-  }
 }));
 
-// Example route
+// Setup a simple route
 app.get('/', (req, res) => {
-  res.send('Hello, world!');
+  res.send('Hello from WhatsApp API!');
 });
 
-// Start the server
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+// Setup WhatsApp client and QR code
+const client = new Client();
+
+client.on('qr', (qr) => {
+  console.log('QR Code received');
+  qrcode.generate(qr, { small: true }); // Display QR code in the terminal
+});
+
+client.on('ready', () => {
+  console.log('WhatsApp client is ready!');
+});
+
+// Listen for incoming messages or add more event listeners here
+client.on('message', (message) => {
+  console.log(message.body);  // Example of logging incoming messages
+});
+
+// Initialize the WhatsApp client
+client.initialize();
+
+// Start Express server
+app.listen(port, () => {
+  console.log(`Server running on port ${port}`);
 });
