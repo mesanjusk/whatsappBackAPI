@@ -1,80 +1,57 @@
-import express from 'express';
-import mongoose from 'mongoose';
-import whatsapp from 'whatsapp-web.js';
-import qrcode from 'qrcode-terminal';
-import { MongoStore } from 'wwebjs-mongo';
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
-import cors from 'cors';
-import dotenv from 'dotenv';
+const mongoose = require('mongoose');
+const { Client, RemoteAuth } = require('whatsapp-web.js');
+const { MongoStore } = require('wwebjs-mongo');
 
-dotenv.config();
+const MONGO_URI = 'mongodb+srv://sanjuahuja:cY7NtMKm8M10MbUs@cluster0.wdfsd.mongodb.net/framme';  // Replace with your MongoDB URI
 
-const { Client, RemoteAuth } = whatsapp;
-
-const app = express();
-app.use(cors());
-app.use(express.json());
-
-// MongoDB connection
-mongoose.connect(process.env.MONGO_URI || 'your-mongo-connection-string', {
+// Step 1: Connect to MongoDB
+mongoose.connect(MONGO_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true
-}).then(() => console.log("✅ MongoDB connected"))
-  .catch(err => console.error("❌ MongoDB connection error:", err));
+})
+  .then(() => {
+    console.log('✅ MongoDB connected');
 
-// WhatsApp client setup
-const store = new MongoStore({ mongoose });
-const client = new Client({
-  authStrategy: new RemoteAuth({
-    store,
-    backupSyncIntervalMs: 300000
-  }),
-  puppeteer: {
-    headless: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox']
-  }
-});
+    // Step 2: Once the connection is successful, initialize MongoStore
+    const store = new MongoStore({ mongoose: mongoose });
 
-client.on('qr', qr => {
-  console.log("🔒 QR Code received:");
-  qrcode.generate(qr, { small: true });
-});
+    // Step 3: Initialize WhatsApp Client
+    const client = new Client({
+      authStrategy: new RemoteAuth({
+        store: store,
+        backupSyncIntervalMs: 60000
+      }),
+      puppeteer: {
+        args: ['--no-sandbox'],
+        headless: true
+      }
+    });
 
-client.on('ready', () => {
-  console.log('✅ WhatsApp client is ready!');
-});
+    // Step 4: Initialize the client
+    client.initialize();
 
-client.on('authenticated', () => {
-  console.log('🔐 WhatsApp client authenticated');
-});
+    // Optional: Add event listeners for client events
+    client.on('qr', qr => {
+      console.log('QR RECEIVED', qr);
+    });
 
-client.on('auth_failure', msg => {
-  console.error('❌ Authentication failed:', msg);
-});
+    client.on('ready', () => {
+      console.log('✅ WhatsApp Client is ready');
+    });
 
-client.initialize();
+    client.on('authenticated', () => {
+      console.log('✅ WhatsApp Client authenticated');
+    });
 
-// Simple test route
-app.get('/', (req, res) => {
-  res.send('✅ WhatsApp API Backend is running');
-});
+    client.on('auth_failure', (msg) => {
+      console.error('❌ Authentication failed:', msg);
+    });
 
-// Send message route
-app.post('/send-message', async (req, res) => {
-  const { number, message } = req.body;
-  try {
-    const chatId = number + "@c.us";
-    await client.sendMessage(chatId, message);
-    res.status(200).json({ success: true, message: '📨 Message sent successfully' });
-  } catch (error) {
-    console.error("❌ Failed to send message:", error);
-    res.status(500).json({ success: false, message: 'Failed to send message', error });
-  }
-});
+    client.on('disconnected', () => {
+      console.log('❌ WhatsApp Client disconnected');
+    });
 
-// Start server
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`🚀 Server is running on port ${PORT}`);
-});
+  })
+  .catch((err) => {
+    console.error('❌ MongoDB connection error:', err);
+  });
