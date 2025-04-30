@@ -2,14 +2,14 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const qrcode = require('qrcode');
-const { Client, LocalAuth } = require('whatsapp-web.js');
+const { Client, LocalAuth, Buttons } = require('whatsapp-web.js');
 const cors = require('cors');
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: '*', // Or replace with your frontend URL
+    origin: '*',
     methods: ['GET', 'POST']
   }
 });
@@ -59,7 +59,7 @@ client.on('disconnected', (reason) => {
   io.emit('disconnected', reason);
 });
 
-// ✅ REST API to send WhatsApp message (POST method)
+// ✅ REST API to send WhatsApp message
 app.post('/send-message', async (req, res) => {
   const { number, message } = req.body;
 
@@ -78,7 +78,7 @@ app.post('/send-message', async (req, res) => {
   }
 });
 
-// ✅ REST API to send WhatsApp message (GET method)
+// ✅ GET API for message sending (e.g., for testing in browser)
 app.get('/send-message', async (req, res) => {
   const { number, message } = req.query;
 
@@ -94,6 +94,34 @@ app.get('/send-message', async (req, res) => {
   } catch (error) {
     console.error('❌ Failed to send message:', error);
     res.status(500).json({ success: false, error: 'Failed to send message' });
+  }
+});
+
+// ✅ Auto reply with buttons
+client.on('message', async (msg) => {
+  if (msg.body.toLowerCase() === 'menu') {
+    const buttonMessage = new Buttons(
+      'Please choose an option:',
+      [
+        { body: '📦 Order Status' },
+        { body: '🧾 Invoice' },
+        { body: '📞 Support' }
+      ],
+      'Main Menu',
+      'Select one'
+    );
+
+    await client.sendMessage(msg.from, buttonMessage);
+  }
+
+  if (msg.body === '📦 Order Status') {
+    await msg.reply('✅ Your order is being processed.');
+  }
+  if (msg.body === '🧾 Invoice') {
+    await msg.reply('🧾 Your invoice will be sent shortly.');
+  }
+  if (msg.body === '📞 Support') {
+    await msg.reply('☎️ Connecting you to support...');
   }
 });
 
