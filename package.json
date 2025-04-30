@@ -12,6 +12,7 @@
     "qrcode-terminal": "^0.12.0",
     "socket.io": "^4.8.1",
     "whatsapp-web.js": "^1.22.1",
-    "dotenv": "^16.0.3"
+    "dotenv": "^16.0.3",
+    "mongoose": "^6.0.0"
   }
 }
