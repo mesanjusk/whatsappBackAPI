@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 const { Client, RemoteAuth } = require('whatsapp-web.js');
 const { MongoStore } = require('wwebjs-mongo');
 
-const MONGO_URI = 'mongodb+srv://sanjuahuja:cY7NtMKm8M10MbUs@cluster0.wdfsd.mongodb.net/framme';  // Replace with your MongoDB URI
+const MONGO_URI = 'your-mongo-uri-here';  // Replace with your MongoDB URI
 
 // Step 1: Connect to MongoDB
 mongoose.connect(MONGO_URI, {
