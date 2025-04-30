@@ -1,48 +1,49 @@
 const express = require('express');
-const { Client, RemoteAuth } = require('whatsapp-web.js');
-const { MongoStore } = require('wwebjs-mongo');
-const mongoose = require('mongoose');
-const qrcode = require('qrcode-terminal');
-const dotenv = require('dotenv');
+const http = require('http');
+const { Server } = require('socket.io');
+const qrcode = require('qrcode');
+const { Client, LocalAuth } = require('whatsapp-web.js');
 const cors = require('cors');
 
-dotenv.config();
-
 const app = express();
-const PORT = process.env.PORT || 3000;
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: '*', // Or replace with your frontend URL
+    methods: ['GET', 'POST']
+  }
+});
 
-// Middleware
 app.use(cors());
 app.use(express.json());
 
-// MongoDB Connection
-const MONGO_URL = process.env.MONGO_URL || 'your-mongodb-connection-string-here';
-mongoose.connect(MONGO_URL, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-}).then(() => console.log('✅ MongoDB connected'))
-  .catch((err) => console.error('❌ MongoDB error:', err));
-
-// WhatsApp client setup
-const store = new MongoStore({ mongoose: mongoose });
 const client = new Client({
-  authStrategy: new RemoteAuth({
-    store,
-    backupSyncIntervalMs: 300000, // optional
-  }),
+  authStrategy: new LocalAuth(),
   puppeteer: {
-    args: ['--no-sandbox', '--disable-setuid-sandbox'],
-  },
+    headless: true,
+    args: ['--no-sandbox']
+  }
 });
 
-// WhatsApp client events
-client.on('qr', (qr) => {
-  console.log('📱 Scan this QR code to log in:');
-  qrcode.generate(qr, { small: true });
+// Socket.IO events
+io.on('connection', (socket) => {
+  console.log('🟢 Frontend connected via socket');
+
+  socket.on('disconnect', () => {
+    console.log('🔴 Socket disconnected');
+  });
+});
+
+// WhatsApp Events
+client.on('qr', async (qr) => {
+  const qrImageUrl = await qrcode.toDataURL(qr);
+  console.log('📲 QR code received, sending to frontend');
+  io.emit('qr', qrImageUrl);
 });
 
 client.on('ready', () => {
-  console.log('✅ WhatsApp is ready!');
+  console.log('✅ WhatsApp client is ready!');
+  io.emit('ready', true);
 });
 
 client.on('authenticated', () => {
@@ -54,35 +55,32 @@ client.on('auth_failure', msg => {
 });
 
 client.on('disconnected', (reason) => {
-  console.log('🔌 WhatsApp disconnected:', reason);
+  console.log('❌ Client disconnected:', reason);
+  io.emit('disconnected', reason);
+});
+
+// ✅ REST API to send WhatsApp message
+app.post('/send-message', async (req, res) => {
+  const { number, message } = req.body;
+
+  if (!number || !message) {
+    return res.status(400).json({ error: 'Number and message are required' });
+  }
+
+  const chatId = number.includes('@c.us') ? number : `${number}@c.us`;
+
+  try {
+    await client.sendMessage(chatId, message);
+    res.status(200).json({ success: true, message: 'Message sent' });
+  } catch (error) {
+    console.error('❌ Failed to send message:', error);
+    res.status(500).json({ success: false, error: 'Failed to send message' });
+  }
 });
 
 client.initialize();
 
-// Routes
-app.get('/', (req, res) => {
-  res.send('🚀 WhatsApp API is running');
-});
-
-app.post('/send', async (req, res) => {
-  const { number, message } = req.body;
-
-  if (!number || !message) {
-    return res.status(400).json({ error: 'Missing number or message' });
-  }
-
-  const formattedNumber = number.includes('@c.us') ? number : `${number}@c.us`;
-
-  try {
-    await client.sendMessage(formattedNumber, message);
-    res.status(200).json({ success: true, number, message });
-  } catch (error) {
-    console.error('❌ Error sending message:', error);
-    res.status(500).json({ error: 'Failed to send message' });
-  }
-});
-
-// Start server
-app.listen(PORT, () => {
-  console.log(`🌐 Server is running on port ${PORT}`);
+const PORT = process.env.PORT || 5000;
+server.listen(PORT, () => {
+  console.log(`🚀 Server running on http://localhost:${PORT}`);
 });
