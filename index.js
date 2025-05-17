@@ -13,11 +13,12 @@ const app = express();
 const server = createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: 'http://localhost:3000',
+    origin: ['http://localhost:3000', 'https://yourfrontenddomain.com'], // allow your frontend domains
     methods: ['GET', 'POST'],
     credentials: true,
-  },
+  }
 });
+
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
