@@ -1,111 +1,134 @@
-const { Client, RemoteAuth } = require('whatsapp-web.js');
-const { default: axios } = require('axios');
-const { MongoStore } = require('wwebjs-mongo');
-const mongoose = require('mongoose');
-const express = require('express');
-const http = require('http');
-const socketIO = require('socket.io');
-const QRCode = require('qrcode');
-const cors = require('cors');
-require('dotenv').config();
+import express from 'express';
+import mongoose from 'mongoose';
+import cors from 'cors';
+import pkg from 'whatsapp-web.js';
+import { MongoStore } from 'wwebjs-mongo';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+import { createServer } from 'http';
+import { Server } from 'socket.io';
 
+const { Client, RemoteAuth } = pkg;
 const app = express();
-const server = http.createServer(app);
-const io = socketIO(server, {
+const server = createServer(app);
+const io = new Server(server, {
   cors: {
-    origin: '*', // Allow all origins or specify 'https://sbsgondia.vercel.app'
+    origin: 'http://localhost:3000',
     methods: ['GET', 'POST'],
+    credentials: true,
   },
 });
 
-// Middleware
-app.use(cors());
-app.use(express.json());
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
-// Connect to MongoDB
-const MONGO_URI = 'mongodb+srv://sanjuahuja:cY7NtMKm8M10MbUs@cluster0.wdfsd.mongodb.net/framme';
-mongoose.connect(MONGO_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-});
+app.use(cors({
+  origin: ['https://yourfrontend.onrender.com', 'http://localhost:3000'],
+  methods: ['GET', 'POST'],
+  credentials: true,
+}));
 
-// Create session store
-const store = new MongoStore({ mongoose: mongoose });
+app.use(express.json()); // ✅ Needed for reading JSON request bodies
 
-// Create WhatsApp client with RemoteAuth
-const client = new Client({
-  authStrategy: new RemoteAuth({
-    store,
-    backupSyncIntervalMs: 300000, // 5 minutes
-  }),
-  puppeteer: {
-    headless: true,
-    args: ['--no-sandbox'],
-  },
-});
+const mongoUri = 'mongodb+srv://sanjuahuja:cY7NtMKm8M10MbUs@cluster0.wdfsd.mongodb.net/framee';
+const sessionId = 'my-session';
 
-// Listen to WebSocket connections
-io.on('connection', (socket) => {
-  console.log('✅ Client connected');
+let client; // ✅ Declare globally so it’s accessible in routes
 
-  // Send QR code when received from client
-  client.on('qr', async (qr) => {
-    console.log('📲 QR Code Received');
-    const qrImage = await QRCode.toDataURL(qr);
-    socket.emit('qr', qrImage); // emit image directly to frontend
+mongoose.connect(mongoUri).then(() => {
+  console.log('✅ MongoDB connected');
+
+  const store = new MongoStore({
+    mongoose: mongoose,
+    collectionName: `whatsapp-${sessionId}`
+  });
+
+  console.log('MongoStore created');
+
+  client = new Client({
+    authStrategy: new RemoteAuth({
+      clientId: sessionId,
+      store,
+      backupSyncIntervalMs: 300000,
+    }),
+    puppeteer: {
+      headless: true,
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    },
+  });
+
+  io.on('connection', socket => {
+    console.log('🔌 New client connected:', socket.id);
+
+    socket.on('disconnect', () => {
+      console.log('❌ Client disconnected:', socket.id);
+    });
+  });
+
+  client.on('qr', qr => {
+    console.log('🟨 QR received');
+    io.emit('qr', qr);
   });
 
   client.on('ready', () => {
-    console.log('🟢 Client is ready');
-    socket.emit('ready', 'WhatsApp is connected');
+    console.log('✅ Client is ready');
+    io.emit('ready');
   });
 
   client.on('authenticated', () => {
-    console.log('🔒 Authenticated');
-    socket.emit('authenticated', 'WhatsApp is authenticated');
+    console.log('🔒 Authenticated and session saved in MongoDB');
+    io.emit('authenticated');
   });
 
-  client.on('auth_failure', (msg) => {
-    console.error('❌ Authentication failure:', msg);
-    socket.emit('auth_failure', msg);
+  client.on('auth_failure', msg => {
+    console.error('❌ Auth failure:', msg);
   });
 
-  client.on('disconnected', (reason) => {
-    console.warn('⚠️ Client was logged out:', reason);
-    socket.emit('disconnected', reason);
+  client.on('disconnected', reason => {
+    console.log('❌ Client disconnected:', reason);
   });
 
-  // Handle logout
-  socket.on('logout', async () => {
-    try {
-      await client.logout();
-      socket.emit('logged_out', 'You have been logged out');
-    } catch (err) {
-      console.error('Logout error:', err);
-      socket.emit('logout_error', err.message);
-    }
-  });
+  client.initialize();
+
+}).catch(err => {
+  console.error('❌ MongoDB connection error:', err);
 });
 
-// API route to send message
+// ✅ Test route
+app.get('/', (req, res) => {
+  res.send('WhatsApp Web.js with MongoDB & RemoteAuth');
+});
+
+// ✅ Send message route
 app.post('/send-message', async (req, res) => {
   const { number, message } = req.body;
-  if (!number || !message) return res.status(400).json({ error: 'Missing number or message' });
 
-  const chatId = number.includes('@c.us') ? number : `${number}@c.us`;
+  if (!client) {
+    return res.status(500).json({ error: 'WhatsApp client not initialized yet' });
+  }
+
+  if (!number || !message) {
+    return res.status(400).json({ error: 'Number and message are required' });
+  }
+
+  const formattedNumber = number.includes('@c.us') ? number : `${number}@c.us`;
+
   try {
-    const sent = await client.sendMessage(chatId, message);
-    return res.status(200).json({ success: true, messageId: sent.id._serialized });
+    const isRegistered = await client.isRegisteredUser(formattedNumber);
+    if (!isRegistered) {
+      return res.status(400).json({ error: 'Number is not registered on WhatsApp' });
+    }
+
+    const msg = await client.sendMessage(formattedNumber, message);
+    console.log(`✅ Message sent to ${number}`);
+    res.status(200).json({ success: true, msgId: msg.id._serialized });
   } catch (error) {
-    return res.status(500).json({ success: false, error: error.message });
+    console.error('❌ Failed to send message:', error);
+    res.status(500).json({ error: 'Failed to send message', details: error.message });
   }
 });
 
-// Start client
-client.initialize();
-
-// Start server
 const PORT = process.env.PORT || 5000;
+
 server.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`🚀 Server running at http://localhost:${PORT}`);
 });
