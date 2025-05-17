@@ -22,7 +22,7 @@ const io = new Server(server, {
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 app.use(cors({
-  origin: ['https://yourfrontend.onrender.com', 'http://localhost:3000'],
+  origin: ['https://whatsappbackapi.onrender.com', 'http://localhost:3000'],
   methods: ['GET', 'POST'],
   credentials: true,
 }));
