@@ -13,7 +13,7 @@ const app = express();
 const server = createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: ['http://localhost:3000', 'https://sbsgondia.vercel.app'], // allow your frontend domains
+    origin: ['https://sbsgondia.vercel.app'], // allow your frontend domains
     methods: ['GET', 'POST'],
     credentials: true,
   }
