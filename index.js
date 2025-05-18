@@ -13,7 +13,7 @@ const server = createServer(app);
 
 const io = new Server(server, {
   cors: {
-    origin: ['https://https://sbsgondia.vercel.app', 'http://localhost:3000'],
+    origin: ['//https://sbsgondia.vercel.app', 'http://localhost:3000'],
     methods: ['GET', 'POST'],
     credentials: true,
   }
@@ -21,7 +21,7 @@ const io = new Server(server, {
 
 // CORS middleware for express routes
 app.use(cors({
-  origin: ['https://https://sbsgondia.vercel.app', 'http://localhost:3000'],
+  origin: ['https://sbsgondia.vercel.app', 'http://localhost:3000'],
   methods: ['GET', 'POST'],
   credentials: true,
 }));
