@@ -23,7 +23,7 @@ const io = new Server(server, {
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 app.use(cors({
-  origin: ['https://whatsappbackapi.onrender.com', 'http://localhost:3000'],
+  origin: ['https://sbsgondia.vercel.app', 'https://whatsappbackapi.onrender.com', 'http://localhost:3000'],
   methods: ['GET', 'POST'],
   credentials: true,
 }));
